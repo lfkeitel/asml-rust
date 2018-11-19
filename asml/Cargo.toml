@@ -1,0 +1,7 @@
+[package]
+name = "asml"
+version = "0.1.0"
+authors = ["Lee Keitel <lee@keitel.xyz>"]
+
+[dependencies]
+srecord = { path = "../srecord" }
