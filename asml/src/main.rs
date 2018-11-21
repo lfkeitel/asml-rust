@@ -1,3 +1,4 @@
+extern crate asml_vm;
 extern crate srecord;
 
 use std::env;
@@ -20,7 +21,20 @@ fn main() {
         std::process::exit(1);
     });
 
-    for r in &records {
-        println!("{}", r);
+    let mut code = Vec::new();
+
+    for r in records {
+        code.push(asml_vm::CodeSection {
+            org: r.address as u16,
+            code: r.data,
+        });
+    }
+
+    let mut vm = asml_vm::VM::new();
+    vm.install_code(&code);
+
+    if let Ok(_) = vm.run() {
+        println!("{:?}", vm);
+        println!("{}", vm.output());
     }
 }

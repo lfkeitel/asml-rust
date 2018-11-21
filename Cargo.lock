@@ -2,8 +2,13 @@
 name = "asml"
 version = "0.1.0"
 dependencies = [
+ "asml_vm 0.1.0",
  "srecord 0.1.0",
 ]
+
+[[package]]
+name = "asml_vm"
+version = "0.1.0"
 
 [[package]]
 name = "srecord"

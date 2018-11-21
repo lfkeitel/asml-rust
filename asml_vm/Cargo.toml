@@ -1,8 +1,6 @@
 [package]
-name = "asml"
+name = "asml_vm"
 version = "0.1.0"
 authors = ["Lee Keitel <lee@keitel.xyz>"]
 
 [dependencies]
-srecord = { path = "../srecord" }
-asml_vm = { path = "../asml_vm" }

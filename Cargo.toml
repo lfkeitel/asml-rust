@@ -3,4 +3,5 @@
 members = [
     "srecord",
     "asml",
+    "asml_vm",
 ]
