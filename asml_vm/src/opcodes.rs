@@ -1,5 +1,6 @@
 #[repr(u8)]
 #[derive(PartialEq, Debug)]
+#[allow(dead_code)]
 pub enum OpCode {
     NOOP,
 

@@ -14,8 +14,6 @@ fn main() {
 
     let srec_path = Path::new(&args[1]);
 
-    println!("Reading srecord file {}", srec_path.display());
-
     let records = srecord::parse_file(srec_path).unwrap_or_else(|e| {
         eprintln!("{}", e);
         std::process::exit(1);
@@ -34,7 +32,7 @@ fn main() {
     vm.install_code(&code);
 
     if let Ok(_) = vm.run() {
-        println!("{:?}", vm);
+        // println!("{:?}", vm);
         println!("{}", vm.output());
     }
 }
