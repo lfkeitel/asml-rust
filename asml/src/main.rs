@@ -1,6 +1,3 @@
-extern crate asml_vm;
-extern crate srecord;
-
 use std::env;
 use std::path::Path;
 
