@@ -1,6 +1,6 @@
 mod opcodes;
 
-use opcodes::OpCode as opc;
+use crate::opcodes::OpCode as opc;
 
 const NUM_OF_MEMORY_CELLS: usize = 65536;
 const NUM_OF_REGISTERS: usize = 10;

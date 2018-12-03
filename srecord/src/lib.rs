@@ -46,7 +46,7 @@ pub fn parse_file(p: &Path) -> Result<Srecord> {
     let mut records = Vec::new();
 
     for (i, l) in buf_reader.lines().enumerate() {
-        use SrecType::*;
+        use crate::SrecType::*;
 
         macro_rules! invalid_line {
             ($msg:expr) => {
@@ -221,7 +221,7 @@ impl Line {
 
     fn gen_checksum(&self) -> u8 {
         // Checksum = !(byte count + address + data (wrapped to u8))
-        use SrecType::*;
+        use crate::SrecType::*;
 
         let mut sum = Wrapping(self.byte_count());
 
@@ -246,7 +246,7 @@ impl Line {
     }
 
     fn byte_count(&self) -> u8 {
-        use SrecType::*;
+        use crate::SrecType::*;
 
         let mut count = self.data.len() as u8; // Data
         count += 1; // Checksum byte
