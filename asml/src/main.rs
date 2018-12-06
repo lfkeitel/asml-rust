@@ -28,8 +28,7 @@ fn main() {
     let mut vm = asml_vm::VM::new();
     vm.install_code(&code);
 
-    if let Ok(_) = vm.run() {
-        // println!("{:?}", vm);
+    if vm.run().is_ok() {
         println!("{}", vm.output());
     }
 }

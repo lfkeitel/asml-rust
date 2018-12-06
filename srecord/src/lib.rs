@@ -57,7 +57,7 @@ pub fn parse_file(p: &Path) -> Result<Srecord> {
         let raw_line = l?;
         let line = raw_line.trim().as_bytes();
 
-        if line.len() < 10 || line.len() > 514 || line[0] != 'S' as u8 {
+        if line.len() < 10 || line.len() > 514 || line[0] != b'S' {
             invalid_line!("invalid length or doesn't start with S");
         }
 
@@ -127,19 +127,19 @@ fn convert_hex(bytes: &[u8]) -> Vec<u8> {
 
 fn bytes_to_address(bytes: &[u8]) -> u32 {
     match bytes.len() {
-        2 => ((bytes[0] as u32) << 8) | bytes[1] as u32,
-        3 => ((bytes[0] as u32) << 16) | ((bytes[1] as u32) << 8) | bytes[2] as u32,
+        2 => ((u32::from(bytes[0])) << 8) | u32::from(bytes[1]),
+        3 => ((u32::from(bytes[0])) << 16) | ((u32::from(bytes[1])) << 8) | u32::from(bytes[2]),
         4 => {
-            ((bytes[0] as u32) << 24)
-                | ((bytes[1] as u32) << 16)
-                | ((bytes[2] as u32) << 8)
-                | bytes[3] as u32
+            ((u32::from(bytes[0])) << 24)
+                | ((u32::from(bytes[1])) << 16)
+                | ((u32::from(bytes[2])) << 8)
+                | u32::from(bytes[3])
         }
         _ => 0,
     }
 }
 
-fn to_hex_string(bytes: &Vec<u8>) -> String {
+fn to_hex_string(bytes: &[u8]) -> String {
     let strs: Vec<String> = bytes.iter().map(|b| format!("{:02X}", b)).collect();
     strs.join("")
 }

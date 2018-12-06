@@ -24,14 +24,14 @@ fn reg_width(r: u8) -> u8 {
     }
 }
 
-pub type Code = Vec<CodeSection>;
+pub type Code = [CodeSection];
 
 pub struct CodeSection {
     pub org: u16,
     pub code: Vec<u8>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct VM {
     registers: Vec<u8>,
     memory: Vec<u8>,
@@ -99,7 +99,7 @@ impl VM {
     }
 
     pub fn reset(&mut self) {
-        self.pc = (self.memory[0xFFFE] as u16) << 8 | self.memory[0xFFFF] as u16;
+        self.pc = (u16::from(self.memory[0xFFFE])) << 8 | u16::from(self.memory[0xFFFF]);
     }
 
     pub fn enable_print_state(&mut self) {
@@ -117,9 +117,9 @@ impl VM {
     }
 
     fn fetch_u16(&mut self) -> u16 {
-        let b1 = self.fetch_byte() as u16;
-        let b2 = self.fetch_byte() as u16;
-        return (b1 << 8) | b2;
+        let b1 = u16::from(self.fetch_byte());
+        let b2 = u16::from(self.fetch_byte());
+        (b1 << 8) | b2
     }
 
     fn print_state(&self) {}
@@ -225,7 +225,7 @@ impl VM {
         if is_double_reg(r) {
             self.read_double_reg(r)
         } else {
-            self.read_single_reg(r) as u16
+            u16::from(self.read_single_reg(r))
         }
     }
 
@@ -247,13 +247,13 @@ impl VM {
 
     fn read_double_reg(&self, r: u8) -> u16 {
         if r == REG_A {
-            (self.registers[2] as u16) << 8 | self.registers[3] as u16
+            u16::from(self.registers[2]) << 8 | u16::from(self.registers[3])
         } else if r == REG_B {
-            (self.registers[4] as u16) << 8 | self.registers[5] as u16
+            u16::from(self.registers[4]) << 8 | u16::from(self.registers[5])
         } else if r == REG_C {
-            (self.registers[6] as u16) << 8 | self.registers[7] as u16
+            u16::from(self.registers[6]) << 8 | u16::from(self.registers[7])
         } else if r == REG_D {
-            (self.registers[8] as u16) << 8 | self.registers[9] as u16
+            u16::from(self.registers[8]) << 8 | u16::from(self.registers[9])
         } else {
             0
         }
@@ -278,10 +278,10 @@ impl VM {
     // Memory manipulation
     fn read_mem(&self, addr: u16, width: u8) -> u16 {
         if width == 1 {
-            return self.memory[addr as usize] as u16;
+            return u16::from(self.memory[addr as usize]);
         } else if width == 2 {
-            let b1 = self.memory[addr as usize] as u16;
-            let b2 = self.memory[(addr + 1) as usize] as u16;
+            let b1 = u16::from(self.memory[addr as usize]);
+            let b2 = u16::from(self.memory[(addr + 1) as usize]);
             return b1 << 8 | b2;
         }
 
@@ -302,7 +302,7 @@ impl VM {
     }
 
     fn write_mem_u8(&mut self, addr: u16, data: u8) {
-        self.write_mem(addr, 1, data as u16)
+        self.write_mem(addr, 1, u16::from(data))
     }
 
     fn read_mem_u16(&self, addr: u16) -> u16 {
@@ -371,7 +371,7 @@ impl VM {
     fn inst_rotr(&mut self, dest: u8, places: u8) {
         if is_double_reg(dest) {
             let val = self.read_double_reg(dest);
-            let data = val.rotate_right(places as u32);
+            let data = val.rotate_right(u32::from(places));
             self.write_double_reg(dest, data);
         }
     }
@@ -379,7 +379,7 @@ impl VM {
     fn inst_rotl(&mut self, dest: u8, places: u8) {
         if is_double_reg(dest) {
             let val = self.read_double_reg(dest);
-            let data = val.rotate_left(places as u32);
+            let data = val.rotate_left(u32::from(places));
             self.write_double_reg(dest, data);
         }
     }
