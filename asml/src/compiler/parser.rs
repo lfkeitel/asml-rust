@@ -4,14 +4,18 @@ use std::fmt;
 use super::lexer;
 use super::token::{Token, TokenType};
 
-enum ParserError {
+use asml_vm::opcodes::OpCode;
+
+pub enum ParserError {
     InvalidCode(String),
+    ExpectedToken(String),
 }
 
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ParserError::InvalidCode(s) => write!(f, "{}", s),
+            ParserError::ExpectedToken(s) => write!(f, "{}", s),
         }
     }
 }
@@ -36,55 +40,52 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Result<Program, ParserError> {
+    pub fn parse(mut self) -> Result<Program, ParserError> {
         while self.cur_tok.name != TokenType::EOF {
             let res = match self.cur_tok.name {
                 TokenType::END_INST => break,
                 TokenType::LABEL => self.make_label(),
 
-                TokenType::LOAD => self.ins_load(),
+                TokenType::LOAD => self.parse_inst(OpCode::LOADI, OpCode::LOADA, OpCode::LOADR),
 
-                TokenType::STR => self.ins_store(),
+                TokenType::STR => self.parse_inst_no_imm(OpCode::STRA, OpCode::STRR),
 
-                TokenType::XFER => self.ins_movr(),
+                // TokenType::XFER => self.ins_movr(),
 
-                TokenType::ADD => self.ins_add(),
+                // TokenType::ADD => self.ins_add(),
+                TokenType::OR => self.parse_inst(OpCode::ORI, OpCode::ORA, OpCode::ORR),
+                TokenType::AND => self.parse_inst(OpCode::ANDI, OpCode::ANDA, OpCode::ANDR),
+                TokenType::XOR => self.parse_inst(OpCode::XORI, OpCode::XORA, OpCode::XORR),
 
-                TokenType::OR => self.ins_or(),
-                TokenType::AND => self.ins_and(),
-                TokenType::XOR => self.ins_xor(),
+                // TokenType::ROTR => self.ins_rotr(),
+                // TokenType::ROTL => self.ins_rotl(),
 
-                TokenType::ROTR => self.ins_rotr(),
-                TokenType::ROTL => self.ins_rotl(),
+                // TokenType::PUSH => self.ins_push(),
+                // TokenType::POP => self.ins_pop(),
 
-                TokenType::PUSH => self.ins_push(),
-                TokenType::POP => self.ins_pop(),
+                // TokenType::CALL => self.ins_call(),
 
-                TokenType::CALL => self.ins_call(),
+                // TokenType::JMP => self.ins_jmp(),
+                // TokenType::JMPA => self.ins_jmpa(),
 
-                TokenType::JMP => self.ins_jmp(),
-                TokenType::JMPA => self.ins_jmpa(),
+                // TokenType::LDSP => self.ins_ldsp(),
 
-                TokenType::LDSP => self.ins_ldsp(),
+                // TokenType::HALT => self.ins_halt(),
+                // TokenType::NOOP => self.ins_noop(),
+                // TokenType::RTN => self.ins_rtn(),
 
-                TokenType::HALT => self.ins_halt(),
-                TokenType::NOOP => self.ins_noop(),
-                TokenType::RTN => self.ins_rtn(),
-
-                TokenType::RMB => self.ins_rmb(),
-                TokenType::ORG => self.ins_org(),
+                // TokenType::RMB => self.ins_rmb(),
+                // TokenType::ORG => self.ins_org(),
                 TokenType::FCB => self.raw_data_fcb(),
                 TokenType::FDB => self.raw_data_fdb(),
-                _ => {
-                    Err(ParserError::InvalidCode(format!(
-                        "line {}, col {} Unknown token {}",
-                        self.cur_tok.line, self.cur_tok.col, self.cur_tok.name
-                    )));
-                }
+                _ => Err(ParserError::InvalidCode(format!(
+                    "line {}, col {} Unknown token {}",
+                    self.cur_tok.line, self.cur_tok.col, self.cur_tok.name
+                ))),
             };
 
-            if res.is_err() {
-                return res;
+            if let Err(e) = res {
+                return Err(e);
             }
 
             self.read_token()
@@ -110,22 +111,42 @@ impl Parser {
         format!("{} on line {}", msg, self.cur_tok.line)
     }
 
-    fn token_err(&self, t: TokenType) -> String {
-        format!(
+    fn token_err(&self, t: TokenType) -> ParserError {
+        ParserError::ExpectedToken(format!(
             "expected {} on line {}, got {}",
             t, self.cur_tok.line, self.cur_tok.name
-        )
+        ))
     }
 
-    fn parse_address(&mut self, pcoffset: u16) -> Option<u16> {
+    fn tokens_err(&self, t: &[TokenType]) -> ParserError {
+        ParserError::ExpectedToken(format!(
+            "expected {:?} on line {}, got {}",
+            t, self.cur_tok.line, self.cur_tok.name
+        ))
+    }
+
+    fn expect_token(&mut self, t: TokenType) -> Result<(), ParserError> {
+        self.read_token();
+        if !self.cur_token_is(t) {
+            Err(self.token_err(t))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn parse_address(&mut self, pcoffset: u16) -> Result<u16, ParserError> {
         match self.cur_tok.name {
-            TokenType::NUMBER => parse_u16(&self.cur_tok.literal),
+            TokenType::NUMBER => match parse_u16(&self.cur_tok.literal) {
+                Some(n) => Ok(n),
+                None => Err(ParserError::InvalidCode(self.parse_err("invalid address"))),
+            },
             _ => unimplemented!("parse_address"),
         }
     }
 
-    fn make_label(&mut self) {
+    fn make_label(&mut self) -> Result<(), ParserError> {
         self.prog.add_label(&self.cur_tok.literal);
+        Ok(())
     }
 
     fn raw_data_fcb(&mut self) -> Result<(), ParserError> {
@@ -156,7 +177,7 @@ impl Parser {
             }
 
             if !self.cur_token_is(TokenType::COMMA) {
-                return Err(ParserError::InvalidCode(self.token_err(TokenType::COMMA)));
+                return Err(self.token_err(TokenType::COMMA));
             }
             self.read_token();
         }
@@ -174,11 +195,8 @@ impl Parser {
                 ));
             }
 
-            if let Some(val) = self.parse_address(0) {
-                self.prog.append_code(&[(val >> 8) as u8, val as u8]);
-            } else {
-                return Err(ParserError::InvalidCode(self.parse_err("Invalid bytes")));
-            }
+            let val = self.parse_address(0)?;
+            self.prog.append_code(&[(val >> 8) as u8, val as u8]);
 
             self.read_token();
             if self.cur_token_is(TokenType::END_INST) {
@@ -186,12 +204,92 @@ impl Parser {
             }
 
             if !self.cur_token_is(TokenType::COMMA) {
-                return Err(ParserError::InvalidCode(self.token_err(TokenType::COMMA)));
+                return Err(self.token_err(TokenType::COMMA));
             }
             self.read_token();
         }
 
         Ok(())
+    }
+
+    fn parse_inst(&mut self, imm: OpCode, addr: OpCode, reg: OpCode) -> Result<(), ParserError> {
+        self.read_token();
+        let dest = self.parse_register()?;
+
+        self.read_token();
+        match self.cur_tok.name {
+            TokenType::NUMBER | TokenType::IDENT => {
+                let val = self.parse_address(2)?;
+                self.prog
+                    .append_code(&[addr as u8, dest as u8, (val >> 8) as u8, val as u8]);
+            }
+            TokenType::IMMEDIATE => {
+                self.read_token();
+                let val = self.parse_address(2)?;
+                self.prog
+                    .append_code(&[imm as u8, dest as u8, (val >> 8) as u8, val as u8]);
+            }
+            TokenType::REGISTER => {
+                let src = self.parse_register()?;
+                self.prog.append_code(&[reg as u8, dest as u8, src]);
+            }
+            _ => {
+                return Err(self.tokens_err(&[
+                    TokenType::NUMBER,
+                    TokenType::IDENT,
+                    TokenType::IMMEDIATE,
+                    TokenType::REGISTER,
+                ]));
+            }
+        };
+
+        self.expect_token(TokenType::END_INST)
+    }
+
+    fn parse_inst_no_imm(&mut self, addr: OpCode, reg: OpCode) -> Result<(), ParserError> {
+        self.read_token();
+        let dest = self.parse_register()?;
+
+        self.read_token();
+        match self.cur_tok.name {
+            TokenType::NUMBER | TokenType::IDENT => {
+                let val = self.parse_address(2)?;
+                self.prog
+                    .append_code(&[addr as u8, dest as u8, (val >> 8) as u8, val as u8]);
+            }
+            TokenType::REGISTER => {
+                let src = self.parse_register()?;
+                self.prog.append_code(&[reg as u8, dest as u8, src]);
+            }
+            _ => {
+                return Err(self.tokens_err(&[
+                    TokenType::NUMBER,
+                    TokenType::IDENT,
+                    TokenType::REGISTER,
+                ]));
+            }
+        };
+
+        self.expect_token(TokenType::END_INST)
+    }
+
+    fn parse_register(&self) -> Result<u8, ParserError> {
+        if !self.cur_token_is(TokenType::REGISTER) {
+            return Err(self.token_err(TokenType::REGISTER));
+        }
+
+        let regt = &self.cur_tok;
+
+        match parse_register_lit(&self.cur_tok.literal) {
+            Ok(n) => {
+                if n > 13 {
+                    Err(ParserError::InvalidCode(self.parse_err("invalid register")))
+                } else {
+                    Ok(n)
+                }
+            }
+            Err(n) => Err(n),
+        }
     }
 }
 
@@ -211,6 +309,13 @@ fn parse_u16(s: &String) -> Option<u16> {
             Ok(n) => Some(n),
             Err(_) => None,
         }
+    }
+}
+
+fn parse_register_lit(s: &String) -> Result<u8, ParserError> {
+    match u8::from_str_radix(s.trim_start_matches("0x"), 16) {
+        Ok(n) => Ok(n),
+        Err(_) => Err(ParserError::InvalidCode("invalid register".to_owned())),
     }
 }
 

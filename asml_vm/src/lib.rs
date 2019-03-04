@@ -1,4 +1,4 @@
-mod opcodes;
+pub mod opcodes;
 
 use crate::opcodes::OpCode as opc;
 

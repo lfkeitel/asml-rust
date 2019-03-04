@@ -113,6 +113,12 @@ impl fmt::Display for TokenType {
 	}
 }
 
+impl fmt::Debug for TokenType {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "{}", self.to_string())
+	}
+}
+
 pub struct Token {
 	pub name: TokenType,
 	pub literal: String,
