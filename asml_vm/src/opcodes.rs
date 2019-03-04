@@ -47,11 +47,17 @@ pub enum OpCode {
 
     POP,
     PUSH,
+
+    End, // Fake instruction marking end of enum list for conversion check
 }
 
 impl From<u8> for OpCode {
     fn from(i: u8) -> OpCode {
-        unsafe { std::mem::transmute(i) }
+        if i > OpCode::End as u8 {
+            OpCode::NOOP
+        } else {
+            unsafe { std::mem::transmute(i) }
+        }
     }
 }
 
@@ -65,5 +71,13 @@ mod test {
         let op = OpCode::from(i);
 
         assert_eq!(op, OpCode::ADDI);
+    }
+
+    #[test]
+    fn test_invalid_opcode_value() {
+        let i: u8 = 255;
+        let op = OpCode::from(i);
+
+        assert_eq!(op, OpCode::NOOP);
     }
 }

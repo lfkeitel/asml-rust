@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 srecord = { path = "../srecord" }
 asml_vm = { path = "../asml_vm" }
+clap = "2.*"

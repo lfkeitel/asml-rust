@@ -24,7 +24,7 @@ fn reg_width(r: u8) -> u8 {
     }
 }
 
-pub type Code = [CodeSection];
+pub type Code = Vec<CodeSection>;
 
 pub struct CodeSection {
     pub org: u16,
