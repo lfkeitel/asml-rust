@@ -1,4 +1,4 @@
-use super::parser::Program;
+use super::parser::program::Program;
 
 pub fn link(program: &mut Program) -> Result<(), String> {
     for part in &mut program.parts {

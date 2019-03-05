@@ -1,7 +1,7 @@
-pub mod lexer;
+mod lexer;
 mod linker;
-pub mod parser;
-pub mod token;
+mod parser;
+mod token;
 
 use std::fs::File;
 use std::io::{BufReader, Read};
