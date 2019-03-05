@@ -67,59 +67,59 @@ impl TokenType {
 			_ => TokenType::IDENT,
 		}
 	}
-
-	fn to_string(&self) -> String {
-		match self {
-			TokenType::ILLEGAL => "ILLEGAL".to_owned(),
-			TokenType::EOF => "EOF".to_owned(),
-			TokenType::COMMENT => "COMMENT".to_owned(),
-			TokenType::END_INST => "END_INST".to_owned(),
-			TokenType::COMMA => "COMMA".to_owned(),
-			TokenType::IMMEDIATE => "IMMEDIATE".to_owned(),
-			TokenType::IDENT => "IDENT".to_owned(),
-			TokenType::LABEL => "LABEL".to_owned(),
-			TokenType::NUMBER => "NUMBER".to_owned(),
-			TokenType::STRING => "STRING".to_owned(),
-			TokenType::REGISTER => "REGISTER".to_owned(),
-			TokenType::NOOP => "NOOP".to_owned(),
-			TokenType::LOAD => "LOAD".to_owned(),
-			TokenType::STR => "STR".to_owned(),
-			TokenType::XFER => "XFER".to_owned(),
-			TokenType::ADD => "ADD".to_owned(),
-			TokenType::OR => "OR".to_owned(),
-			TokenType::AND => "AND".to_owned(),
-			TokenType::XOR => "XOR".to_owned(),
-			TokenType::ROTR => "ROTR".to_owned(),
-			TokenType::ROTL => "ROTL".to_owned(),
-			TokenType::JMP => "JMP".to_owned(),
-			TokenType::HALT => "HALT".to_owned(),
-			TokenType::JMPA => "JMPA".to_owned(),
-			TokenType::LDSP => "LDSP".to_owned(),
-			TokenType::PUSH => "PUSH".to_owned(),
-			TokenType::POP => "POP".to_owned(),
-			TokenType::CALL => "CALL".to_owned(),
-			TokenType::RTN => "RTN".to_owned(),
-			TokenType::RMB => "RMB".to_owned(),
-			TokenType::ORG => "ORG".to_owned(),
-			TokenType::FCB => "FCB".to_owned(),
-			TokenType::FDB => "FDB".to_owned(),
-		}
-	}
 }
 
 impl fmt::Display for TokenType {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "{}", self.to_string())
+		write!(
+			f,
+			"{}",
+			match self {
+				TokenType::ILLEGAL => "ILLEGAL",
+				TokenType::EOF => "EOF",
+				TokenType::COMMENT => "COMMENT",
+				TokenType::END_INST => "END_INST",
+				TokenType::COMMA => "COMMA",
+				TokenType::IMMEDIATE => "IMMEDIATE",
+				TokenType::IDENT => "IDENT",
+				TokenType::LABEL => "LABEL",
+				TokenType::NUMBER => "NUMBER",
+				TokenType::STRING => "STRING",
+				TokenType::REGISTER => "REGISTER",
+				TokenType::NOOP => "NOOP",
+				TokenType::LOAD => "LOAD",
+				TokenType::STR => "STR",
+				TokenType::XFER => "XFER",
+				TokenType::ADD => "ADD",
+				TokenType::OR => "OR",
+				TokenType::AND => "AND",
+				TokenType::XOR => "XOR",
+				TokenType::ROTR => "ROTR",
+				TokenType::ROTL => "ROTL",
+				TokenType::JMP => "JMP",
+				TokenType::HALT => "HALT",
+				TokenType::JMPA => "JMPA",
+				TokenType::LDSP => "LDSP",
+				TokenType::PUSH => "PUSH",
+				TokenType::POP => "POP",
+				TokenType::CALL => "CALL",
+				TokenType::RTN => "RTN",
+				TokenType::RMB => "RMB",
+				TokenType::ORG => "ORG",
+				TokenType::FCB => "FCB",
+				TokenType::FDB => "FDB",
+			}
+		)
 	}
 }
 
 impl fmt::Debug for TokenType {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "{}", self.to_string())
+		write!(f, "{}", self)
 	}
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Token {
 	pub name: TokenType,
 	pub literal: String,
@@ -132,8 +132,8 @@ impl Token {
 		Token {
 			name: t,
 			literal: lit,
-			line: line,
-			col: col,
+			line,
+			col,
 		}
 	}
 

@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use super::lexer;
 use super::token::{Token, TokenType};
 
 use asml_vm::opcodes::OpCode;
@@ -10,6 +9,7 @@ use asml_vm::{Code, CodeSection};
 pub enum ParserError {
     InvalidCode(String),
     ExpectedToken(String),
+    ValidationError(String),
 }
 
 impl fmt::Display for ParserError {
@@ -17,24 +17,35 @@ impl fmt::Display for ParserError {
         match self {
             ParserError::InvalidCode(s) => write!(f, "{}", s),
             ParserError::ExpectedToken(s) => write!(f, "{}", s),
+            ParserError::ValidationError(s) => write!(f, "{}", s),
         }
     }
 }
 
-pub struct Parser {
-    lex: lexer::Lexer,
+impl fmt::Debug for ParserError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ParserError::InvalidCode(s) => write!(f, "{}", s),
+            ParserError::ExpectedToken(s) => write!(f, "{}", s),
+            ParserError::ValidationError(s) => write!(f, "{}", s),
+        }
+    }
+}
+
+pub struct Parser<L: Iterator<Item = Token>> {
+    lexer: L,
     cur_tok: Token,
     peek_tok: Token,
     prog: Program,
 }
 
-impl Parser {
-    pub fn new(mut lex: lexer::Lexer) -> Self {
-        let cur = lex.next().unwrap();
-        let peek = lex.next().unwrap();
+impl<L: Iterator<Item = Token>> Parser<L> {
+    pub fn new(mut lexer: L) -> Self {
+        let cur = lexer.next().unwrap();
+        let peek = lexer.next().unwrap();
 
         Parser {
-            lex: lex,
+            lexer,
             cur_tok: cur,
             peek_tok: peek,
             prog: Program::new(),
@@ -43,9 +54,9 @@ impl Parser {
 
     pub fn parse(mut self) -> Result<Program, ParserError> {
         while self.cur_tok.name != TokenType::EOF {
-            let res = match self.cur_tok.name {
+            let res: Result<(), ParserError> = match self.cur_tok.name {
                 // Skip empty lines
-                TokenType::END_INST => {
+                TokenType::END_INST | TokenType::COMMENT => {
                     self.read_token();
                     continue;
                 }
@@ -55,23 +66,25 @@ impl Parser {
 
                 TokenType::STR => self.parse_inst_no_imm(OpCode::STRA, OpCode::STRR),
 
-                // TokenType::XFER => self.parse_reg_reg(OpCode::XFER),
+                TokenType::XFER => self.parse_reg_reg(OpCode::XFER),
+
                 TokenType::ADD => self.parse_inst(OpCode::ADDI, OpCode::ADDA, OpCode::ADDR),
 
                 TokenType::OR => self.parse_inst(OpCode::ORI, OpCode::ORA, OpCode::ORR),
                 TokenType::AND => self.parse_inst(OpCode::ANDI, OpCode::ANDA, OpCode::ANDR),
                 TokenType::XOR => self.parse_inst(OpCode::XORI, OpCode::XORA, OpCode::XORR),
 
-                // TokenType::ROTR => self.parse_reg_half_num(OpCode::ROTR),
-                // TokenType::ROTL => self.parse_reg_half_num(OpCode::ROTL),
+                TokenType::ROTR => self.parse_reg_half_num(OpCode::ROTR),
+                TokenType::ROTL => self.parse_reg_half_num(OpCode::ROTL),
 
-                // TokenType::PUSH => self.parse_reg(OpCode::PUSH),
-                // TokenType::POP => self.parse_reg(OpCode::POP),
+                TokenType::PUSH => self.parse_reg(OpCode::PUSH),
+                TokenType::POP => self.parse_reg(OpCode::POP),
 
-                // TokenType::CALL => self.parse_inst_no_imm_no_dest(OpCode::CALLA, OpCode::CALLR),
+                TokenType::CALL => self.parse_inst_no_imm_no_dest(OpCode::CALLA, OpCode::CALLR),
 
-                // TokenType::JMP => self.parse_reg_num(OpCode::JMP),
-                // TokenType::JMPA => self.parse_num(OpCode::JMPA),
+                TokenType::JMP => self.parse_reg_num(OpCode::JMP),
+                TokenType::JMPA => self.parse_num(OpCode::JMPA),
+
                 TokenType::LDSP => {
                     self.parse_inst_no_dest(OpCode::LDSPI, OpCode::LDSPA, OpCode::LDSPR)
                 }
@@ -86,7 +99,6 @@ impl Parser {
                 TokenType::ORG => self.ins_org(),
                 TokenType::FCB => self.raw_data_fcb(),
                 TokenType::FDB => self.raw_data_fdb(),
-
                 _ => Err(ParserError::InvalidCode(format!(
                     "line {}, col {} Unknown token {}",
                     self.cur_tok.line, self.cur_tok.col, self.cur_tok.name
@@ -100,16 +112,15 @@ impl Parser {
             self.read_token()
         }
 
-        Ok(self.prog)
+        match self.prog.validate() {
+            Ok(_) => Ok(self.prog),
+            Err(e) => Err(ParserError::ValidationError(e)),
+        }
     }
 
     fn read_token(&mut self) {
         self.cur_tok = self.peek_tok.clone();
-        self.peek_tok = self.lex.next().unwrap();
-
-        while self.peek_tok.name == TokenType::COMMENT {
-            self.peek_tok = self.lex.next().unwrap();
-        }
+        self.peek_tok = self.lexer.next().unwrap();
     }
 
     fn cur_token_is(&self, t: TokenType) -> bool {
@@ -157,6 +168,38 @@ impl Parser {
                     1 => Ok(u16::from(bytes[0])),
                     2 => Ok((u16::from(bytes[0]) << 8) + u16::from(bytes[1])),
                     _ => Err(self.parse_err("string too long")),
+                }
+            }
+            TokenType::IDENT => {
+                let mut label: &str = &self.cur_tok.literal.as_ref();
+                let lit = label;
+
+                let mut offset = 0i16;
+
+                let add_index = label.find('+').unwrap_or_default();
+                let sub_index = label.find('-').unwrap_or_default();
+
+                if add_index > 0 || sub_index > 0 {
+                    let ind = {
+                        if add_index > 0 {
+                            add_index
+                        } else {
+                            sub_index
+                        }
+                    } as usize;
+
+                    label = lit.split_at(ind).0;
+                    offset = match (lit.split_at(ind).1).parse::<i16>() {
+                        Ok(n) => n,
+                        Err(_) => return Err(self.parse_err("invalid address offset")),
+                    };
+                }
+
+                if label == "$" {
+                    Ok(self.prog.pc() + offset as u16)
+                } else {
+                    self.prog.add_link(pcoffset, label, offset);
+                    Ok(0)
                 }
             }
             _ => unimplemented!("parse_address"),
@@ -261,6 +304,72 @@ impl Parser {
         self.expect_token(TokenType::END_INST)
     }
 
+    fn parse_num(&mut self, c: OpCode) -> Result<(), ParserError> {
+        // Arg 1
+        self.read_token();
+        let val = self.parse_address(1)?;
+
+        self.prog
+            .append_code(&[c as u8, (val >> 8) as u8, val as u8]);
+        Ok(())
+    }
+
+    fn parse_reg(&mut self, c: OpCode) -> Result<(), ParserError> {
+        // Arg 1
+        self.read_token();
+        let reg1 = self.parse_register()?;
+
+        self.prog.append_code(&[c as u8, reg1]);
+        Ok(())
+    }
+
+    fn parse_reg_reg(&mut self, c: OpCode) -> Result<(), ParserError> {
+        // Arg 1
+        self.read_token();
+        let reg1 = self.parse_register()?;
+
+        // Arg 2
+        self.read_token();
+        let reg2 = self.parse_register()?;
+
+        self.prog.append_code(&[c as u8, reg1, reg2]);
+        Ok(())
+    }
+
+    fn parse_reg_num(&mut self, c: OpCode) -> Result<(), ParserError> {
+        // Arg 1
+        self.read_token();
+        let reg1 = self.parse_register()?;
+
+        // Arg 2
+        self.read_token();
+        let val = self.parse_address(2)?;
+
+        self.prog
+            .append_code(&[c as u8, reg1, (val >> 8) as u8, val as u8]);
+        Ok(())
+    }
+
+    fn parse_reg_half_num(&mut self, c: OpCode) -> Result<(), ParserError> {
+        // Arg 1
+        self.read_token();
+        let reg1 = self.parse_register()?;
+
+        self.read_token();
+        self.expect_token(TokenType::IMMEDIATE)?;
+
+        // Arg 2
+        self.read_token();
+        let val = self.parse_address(2)?;
+
+        if val > 255 {
+            Err(self.parse_err("number must be between 0 - 255"))
+        } else {
+            self.prog.append_code(&[c as u8, reg1, val as u8]);
+            Ok(())
+        }
+    }
+
     fn parse_inst(&mut self, imm: OpCode, addr: OpCode, reg: OpCode) -> Result<(), ParserError> {
         self.read_token();
         let dest = self.parse_register()?;
@@ -303,7 +412,6 @@ impl Parser {
     ) -> Result<(), ParserError> {
         self.read_token();
 
-        self.read_token();
         match self.cur_tok.name {
             TokenType::NUMBER | TokenType::IDENT => {
                 let val = self.parse_address(1)?;
@@ -325,6 +433,31 @@ impl Parser {
                     TokenType::NUMBER,
                     TokenType::IDENT,
                     TokenType::IMMEDIATE,
+                    TokenType::REGISTER,
+                ]));
+            }
+        };
+
+        self.expect_token(TokenType::END_INST)
+    }
+
+    fn parse_inst_no_imm_no_dest(&mut self, addr: OpCode, reg: OpCode) -> Result<(), ParserError> {
+        self.read_token();
+
+        match self.cur_tok.name {
+            TokenType::NUMBER | TokenType::IDENT => {
+                let val = self.parse_address(1)?;
+                self.prog
+                    .append_code(&[addr as u8, (val >> 8) as u8, val as u8]);
+            }
+            TokenType::REGISTER => {
+                let src = self.parse_register()?;
+                self.prog.append_code(&[reg as u8, src]);
+            }
+            _ => {
+                return Err(self.tokens_err(&[
+                    TokenType::NUMBER,
+                    TokenType::IDENT,
                     TokenType::REGISTER,
                 ]));
             }
@@ -404,14 +537,16 @@ fn parse_register_lit(s: &str) -> Result<u8, ParserError> {
     }
 }
 
+#[derive(Debug)]
 pub struct LabelReplace {
     pub label: String,
-    pub offset: u16,
+    pub offset: i16,
 }
 
 pub type LabelLinkMap = HashMap<u16, LabelReplace>;
 pub type LabelMap = HashMap<String, u16>;
 
+#[derive(Debug)]
 pub struct CodePart {
     pub bytes: Vec<u8>,
     pub start_pc: u16,
@@ -425,11 +560,12 @@ impl CodePart {
             bytes: Vec::with_capacity(100),
             link_map: HashMap::new(),
             start_pc: pc,
-            pc: pc,
+            pc,
         }
     }
 }
 
+#[derive(Debug)]
 pub struct Program {
     pub parts: Vec<CodePart>,
     part_i: usize,
@@ -445,16 +581,13 @@ impl Program {
         }
     }
 
-    fn inc_pc(&mut self) {
-        self.parts[self.part_i].pc += 1;
-    }
-
     fn pc(&self) -> u16 {
         self.parts[self.part_i].pc
     }
 
     fn append_code(&mut self, b: &[u8]) {
         self.parts[self.part_i].bytes.extend_from_slice(b);
+        self.parts[self.part_i].pc = self.parts[self.part_i].pc.wrapping_add(b.len() as u16);
     }
 
     fn add_label(&mut self, name: &str) {
@@ -462,13 +595,13 @@ impl Program {
             .insert(name.to_owned(), self.parts[self.part_i].pc);
     }
 
-    fn add_link(&mut self, pc_offset: u16, name: &str, offset: u16) {
+    fn add_link(&mut self, pc_offset: u16, name: &str, offset: i16) {
         let pc = self.pc() - self.parts[self.part_i].start_pc;
         self.parts[self.part_i].link_map.insert(
-            pc,
+            pc + pc_offset,
             LabelReplace {
                 label: name.to_owned(),
-                offset: offset,
+                offset,
             },
         );
     }
@@ -497,7 +630,7 @@ impl Program {
         self.parts.sort_by_key(|p| p.start_pc);
 
         for (i, code) in self.parts.iter().enumerate() {
-            if i == self.parts.len() {
+            if i == self.parts.len() - 1 {
                 break;
             }
 
@@ -514,5 +647,53 @@ Origin 0x{:04X} begins inside region",
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::super::token::{Token, TokenType};
+    use super::*;
+
+    struct TokenIter {
+        tokens: Vec<Token>,
+        idx: usize,
+    }
+
+    impl TokenIter {
+        fn new(tokens: Vec<Token>) -> Self {
+            TokenIter { tokens, idx: 0 }
+        }
+    }
+
+    impl Iterator for TokenIter {
+        type Item = Token;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.idx == self.tokens.len() {
+                Some(Token::simple(TokenType::EOF, 0, 0))
+            } else {
+                let tok = &self.tokens[self.idx];
+                self.idx += 1;
+                Some(tok.clone())
+            }
+        }
+    }
+
+    #[test]
+    fn address_idents() {
+        let tok_stream = TokenIter::new(vec![Token::with_literal(
+            TokenType::IDENT,
+            "str+2".to_owned(),
+            0,
+            0,
+        )]);
+        let mut p = Parser::new(tok_stream);
+        let addr = p.parse_address(0).unwrap();
+        assert!(addr == 0);
+
+        let replacement = &p.prog.parts[p.prog.part_i].link_map[&0u16];
+        assert!(replacement.label == "str");
+        assert!(replacement.offset == 2);
     }
 }

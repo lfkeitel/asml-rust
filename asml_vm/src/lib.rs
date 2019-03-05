@@ -84,7 +84,7 @@ impl VM {
         }
     }
 
-    pub fn install_code(&mut self, code: &Code) {
+    pub fn install_code(&mut self, code: &[CodeSection]) {
         for section in code {
             let pc = section.org;
 

@@ -107,7 +107,7 @@ pub fn parse_file(p: &Path) -> Result<Srecord> {
         records.push(record);
     }
 
-    Ok(records)
+    Ok(Srecord(records))
 }
 
 fn convert_hex(bytes: &[u8]) -> Vec<u8> {
@@ -152,9 +152,43 @@ fn hex_to_byte(h: u8) -> u8 {
     }
 }
 
-type Srecord = Vec<Line>;
+pub struct Srecord(pub Vec<Line>);
 
-#[derive(Debug)]
+impl Srecord {
+    pub fn add_header(&mut self, data: &str) {
+        self.0.push(Line::new_with_data(
+            SrecType::SrecHeader,
+            (*data.as_bytes()).to_vec(),
+        ));
+    }
+
+    pub fn add_record16(&mut self, rec_type: SrecType, address: u16, data: &[u8]) {
+        self.0.push(Line {
+            rec_type,
+            address: u32::from(address),
+            data: data.to_vec(),
+        });
+    }
+
+    pub fn add_record32(&mut self, rec_type: SrecType, address: u32, data: &[u8]) {
+        self.0.push(Line {
+            rec_type,
+            address,
+            data: data.to_vec(),
+        });
+    }
+}
+
+impl fmt::Display for Srecord {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for line in &self.0 {
+            writeln!(f, "{}", line)?
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum SrecType {
     SrecUnknown,
     SrecHeader,
@@ -203,7 +237,7 @@ impl SrecType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Line {
     pub rec_type: SrecType,
     pub address: u32,
@@ -211,11 +245,19 @@ pub struct Line {
 }
 
 impl Line {
-    fn new(t: SrecType) -> Line {
+    fn new(rec_type: SrecType) -> Line {
         Line {
-            rec_type: t,
+            rec_type,
             address: 0,
             data: Vec::new(),
+        }
+    }
+
+    fn new_with_data(rec_type: SrecType, data: Vec<u8>) -> Line {
+        Line {
+            rec_type,
+            address: 0,
+            data,
         }
     }
 
