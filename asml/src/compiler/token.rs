@@ -2,7 +2,7 @@ use std::fmt;
 use std::str;
 
 #[allow(non_camel_case_types)]
-#[derive(PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum TokenType {
 	ILLEGAL,
 	EOF,
@@ -119,6 +119,7 @@ impl fmt::Debug for TokenType {
 	}
 }
 
+#[derive(Clone)]
 pub struct Token {
 	pub name: TokenType,
 	pub literal: String,

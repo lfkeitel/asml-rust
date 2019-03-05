@@ -34,8 +34,8 @@ impl Lexer {
         self.cur_ch = self.peek_ch;
         self.peek_ch = self.reader.next().unwrap_or(Ok(0)).unwrap_or(0);
 
-        if self.cur_ch == b'\r' {
-            self.read_char();
+        if self.peek_ch == b'\r' {
+            self.peek_ch = self.reader.next().unwrap_or(Ok(0)).unwrap_or(0);
         }
 
         self.col += 1;
@@ -120,7 +120,7 @@ impl Iterator for Lexer {
 
         self.devour_whitespace();
 
-        match self.cur_ch {
+        let tok = match self.cur_ch {
             b':' => {
                 self.read_char();
                 some_token!(tokent::LABEL, self.read_identifier())
@@ -151,14 +151,17 @@ impl Iterator for Lexer {
                 if is_letter(self.cur_ch) {
                     let lit = self.read_identifier();
                     let tt = tokent::lookup_ident(&lit);
-                    some_token!(tt, lit)
+                    return some_token!(tt, lit);
                 } else if is_digit(self.cur_ch) {
-                    some_token!(tokent::NUMBER, self.read_number())
+                    return some_token!(tokent::NUMBER, self.read_number());
                 } else {
                     some_token!(tokent::ILLEGAL)
                 }
             }
-        }
+        };
+
+        self.read_char();
+        tok
     }
 }
 

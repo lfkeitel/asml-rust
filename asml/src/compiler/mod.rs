@@ -1,35 +1,25 @@
 pub mod lexer;
-mod parser;
+mod linker;
+pub mod parser;
 pub mod token;
 
-use std::fmt;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
 
-use asml_vm::{Code, CodeSection};
-use parser::Parser;
+use asml_vm::Code;
+use parser::{Parser, ParserError};
 
-pub enum ParseError {
-    Failure(String),
-}
-
-impl fmt::Display for ParseError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ParseError::Failure(s) => write!(f, "{}", s),
-        }
-    }
-}
-
-pub fn compile_file(filepath: &Path) -> Result<Code, ParseError> {
+pub fn compile_file(filepath: &Path) -> Result<Code, ParserError> {
     let file = File::open(filepath).unwrap();
     let buf = BufReader::new(file);
     let reader = buf.bytes();
     let lex = lexer::Lexer::new(reader);
-    let _parser = Parser::new(lex);
+    let mut prog = Parser::new(lex).parse()?;
 
-    let code: Vec<CodeSection> = Vec::new();
-
-    Ok(code)
+    if let Err(s) = linker::link(&mut prog) {
+        Err(ParserError::InvalidCode(s))
+    } else {
+        Ok(prog.to_code())
+    }
 }
