@@ -4,6 +4,9 @@ This is a Rust implementation of a teaching simulator originally written in
 Java. This simulator is used to demonstrate machine programming in computer
 science courses. The instruction set is very limited, but that's the challenge.
 
+A Go implementation with a few more features is available at
+https://github.com/lfkeitel/asml-sim.
+
 ## Building
 
 Compiles with Rust stable, tested on 1.33.0.
