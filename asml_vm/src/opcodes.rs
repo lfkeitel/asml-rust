@@ -47,6 +47,8 @@ pub enum OpCode {
     POP,
     PUSH,
 
+    DEBUG,
+
     End, // Fake instruction marking end of enum list for conversion check
 }
 

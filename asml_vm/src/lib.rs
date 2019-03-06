@@ -1,5 +1,8 @@
 pub mod opcodes;
 
+use std::io;
+use std::process;
+
 use crate::opcodes::OpCode as opc;
 
 const NUM_OF_MEMORY_CELLS: usize = 65536;
@@ -39,7 +42,7 @@ pub struct VM {
     sp: u16,
     output: String,
     printer: String,
-    print_state: bool,
+    debug_mode: bool,
 }
 
 macro_rules! simple_instr_imm {
@@ -80,7 +83,7 @@ impl VM {
             sp: 0,
             output: String::with_capacity(20),
             printer: String::with_capacity(20),
-            print_state: false,
+            debug_mode: false,
         }
     }
 
@@ -102,10 +105,6 @@ impl VM {
         self.pc = (u16::from(self.memory[0xFFFE])) << 8 | u16::from(self.memory[0xFFFF]);
     }
 
-    pub fn enable_print_state(&mut self) {
-        self.print_state = true;
-    }
-
     pub fn output(&self) -> String {
         self.output.clone()
     }
@@ -122,7 +121,36 @@ impl VM {
         (b1 << 8) | b2
     }
 
-    fn print_state(&self) {}
+    fn print_memory(&self) {
+        print!("Memory   00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F  10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F\n\n");
+        let mut i = 0;
+
+        while i < 256 {
+            print!("{:02X}", i);
+            print!("       ");
+
+            for j in 0..16 {
+                print!("{:02X}", self.memory[i + j]);
+                print!(" ");
+            }
+            print!(" ");
+
+            for j in 16..32 {
+                print!("{:02X}", self.memory[i + j]);
+                print!(" ");
+            }
+            print!("\n");
+            i += 32
+        }
+    }
+
+    fn print_registers(&self) {
+        println!("0    1    2    3    4    5    6    7    8    9");
+        for reg in &self.registers {
+            print!("0x{:02X} ", reg);
+        }
+        println!("\nPC: 0x{:02X} | SP: 0x{:02X}", self.pc, self.sp);
+    }
 
     pub fn run(&mut self) -> Result<(), &str> {
         macro_rules! instruction {
@@ -153,13 +181,52 @@ impl VM {
             }};
         }
 
+        let mut debug_disabled = false;
+
         loop {
             let opcode = opc::from(self.fetch_byte());
 
-            if self.print_state {
-                self.print_state();
-                println!("{}", self.output);
-                self.output.clear();
+            if self.debug_mode {
+                println!("Breakpoint hit at 0x{:02X}", self.pc - 1);
+
+                loop {
+                    print!("Debug> ");
+                    io::Write::flush(&mut io::stdout()).expect("flush failed!");
+
+                    let mut input = String::new();
+                    io::stdin().read_line(&mut input).unwrap_or_default();
+                    let parts: Vec<&str> = input.trim().split_whitespace().collect();
+                    if parts.is_empty() {
+                        continue;
+                    }
+
+                    match parts[0] {
+                        "step" => break,
+                        "memory" | "mem" => {
+                            if parts.len() == 1 {
+                                self.print_memory();
+                                continue;
+                            }
+
+                            let address = parts[1].parse::<u16>().unwrap_or_default();
+                            println!(
+                                "[{:02X}] = 0x{:02X}",
+                                address, self.memory[address as usize]
+                            );
+                        }
+                        "continue" | "con" => {
+                            self.debug_mode = false;
+                            break;
+                        }
+                        "disable" | "dis" => debug_disabled = true,
+                        "enable" | "en" => debug_disabled = false,
+                        "next" => println!("Next Instruction: {:?}", opcode),
+                        "registers" | "reg" => self.print_registers(),
+                        "printer" | "print" => println!("{}", self.printer),
+                        "exit" | "quit" => process::exit(0),
+                        _ => println!("Unknown command `{}`", parts[0]),
+                    }
+                }
             }
 
             match opcode {
@@ -207,6 +274,12 @@ impl VM {
                 opc::CALLR => instruction!(inst_callr, u8),
 
                 opc::RTN => instruction!(inst_rtn),
+
+                opc::DEBUG => {
+                    if !debug_disabled {
+                        self.debug_mode = true
+                    }
+                }
                 _ => return Err("Unknown opcode encountered"),
             }
 

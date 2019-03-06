@@ -37,6 +37,7 @@ pub enum TokenType {
     ORG,
     FCB,
     FDB,
+    DEBUG,
 }
 
 impl TokenType {
@@ -64,6 +65,7 @@ impl TokenType {
             "ORG" => TokenType::ORG,
             "FCB" => TokenType::FCB,
             "FDB" => TokenType::FDB,
+            "DEBUG" => TokenType::DEBUG,
             _ => TokenType::IDENT,
         }
     }
@@ -108,6 +110,7 @@ impl fmt::Display for TokenType {
                 TokenType::ORG => "ORG",
                 TokenType::FCB => "FCB",
                 TokenType::FDB => "FDB",
+                TokenType::DEBUG => "DEBUG",
             }
         )
     }

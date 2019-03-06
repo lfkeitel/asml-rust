@@ -96,6 +96,8 @@ impl<L: Iterator<Item = Token>> Parser<L> {
                 TokenType::NOOP => self.parse_no_args(OpCode::NOOP),
                 TokenType::RTN => self.parse_no_args(OpCode::RTN),
 
+                TokenType::DEBUG => self.parse_no_args(OpCode::DEBUG),
+
                 // Meta instructions
                 TokenType::LABEL => self.make_label(),
                 TokenType::RMB => self.ins_rmb(),
