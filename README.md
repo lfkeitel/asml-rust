@@ -83,7 +83,10 @@ the main routine.
 
 ## Language
 
-[Full language reference](docs/instructions.md)
+### Docs
+
+- [Language Reference](docs/reference_guide.md)
+- [Quick Guide](docs/quick_guide.md)
 
 ### Instructions
 
