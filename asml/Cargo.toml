@@ -2,7 +2,7 @@
 name = "asml"
 version = "0.1.0"
 authors = ["Lee Keitel <lee@keitel.xyz>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 srecord = { path = "../srecord" }
