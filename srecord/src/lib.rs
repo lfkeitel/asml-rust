@@ -49,7 +49,7 @@ pub fn parse_file(p: &Path) -> Result<Srecord> {
         use crate::SrecType::*;
 
         macro_rules! invalid_line {
-            ($msg:expr) => {
+            ($msg:expr_2021) => {
                 return Err(SrecordError::InvalidLine(i as u32 + 1, $msg));
             };
         }
@@ -324,7 +324,7 @@ mod tests {
     use super::*;
 
     macro_rules! test_checksum {
-        ($func:ident, $line_type:ident, $address:expr, $expected:expr, [$($data:expr),*]) => {
+        ($func:ident, $line_type:ident, $address:expr_2021, $expected:expr_2021, [$($data:expr_2021),*]) => {
             #[test]
             fn $func() {
                 let l = Line {

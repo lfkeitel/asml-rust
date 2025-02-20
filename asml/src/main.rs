@@ -84,14 +84,14 @@ fn write_code_to_file(code: &[asml_vm::CodeSection], output: &str) {
 
     if output == "stdout" {
         print!("{}", records);
-    } else if let Ok(file) = File::create(Path::new(output)) {
+    } else { match File::create(Path::new(output)) { Ok(file) => {
         match write!(&file, "{}", records) {
             Ok(_) => println!("Compile successful"),
             Err(e) => println!("{}", e),
         }
-    } else {
+    } _ => {
         eprintln!("Unable to open file {}", output);
-    }
+    }}}
 }
 
 fn run_file(path: &str) {

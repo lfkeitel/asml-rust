@@ -98,15 +98,15 @@ impl Iterator for Lexer {
 
     fn next(&mut self) -> Option<Self::Item> {
         macro_rules! some_token {
-            ($inst:expr) => {{
+            ($inst:expr_2021) => {{
                 Some(token::simple($inst, self.line, self.col))
             }};
 
-            ($inst:expr, $s:expr) => {{
+            ($inst:expr_2021, $s:expr_2021) => {{
                 Some(token::with_literal($inst, $s, self.line, self.col))
             }};
 
-            ($inst:expr, $s:expr, $col:expr) => {{
+            ($inst:expr_2021, $s:expr_2021, $col:expr_2021) => {{
                 Some(token::with_literal($inst, $s, self.line, $col))
             }};
         }
