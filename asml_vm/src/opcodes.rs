@@ -57,7 +57,7 @@ impl From<u8> for OpCode {
         if i > OpCode::End as u8 {
             OpCode::NOOP
         } else {
-            unsafe { std::mem::transmute(i) }
+            unsafe { std::mem::transmute::<u8, OpCode>(i) }
         }
     }
 }

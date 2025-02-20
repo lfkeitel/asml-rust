@@ -88,17 +88,17 @@ impl<L: Iterator<Item = Token>> Parser<L> {
             TokenType::NUMBER | TokenType::IDENT => {
                 let val = self.parse_address(2)?;
                 self.prog
-                    .append_code(&[addr as u8, dest as u8, (val >> 8) as u8, val as u8]);
+                    .append_code(&[addr as u8, dest, (val >> 8) as u8, val as u8]);
             }
             TokenType::IMMEDIATE => {
                 self.read_token();
                 let val = self.parse_address(2)?;
                 self.prog
-                    .append_code(&[imm as u8, dest as u8, (val >> 8) as u8, val as u8]);
+                    .append_code(&[imm as u8, dest, (val >> 8) as u8, val as u8]);
             }
             TokenType::REGISTER => {
                 let src = self.parse_register()?;
-                self.prog.append_code(&[reg as u8, dest as u8, src]);
+                self.prog.append_code(&[reg as u8, dest, src]);
             }
             _ => {
                 return Err(self.tokens_err(&[
@@ -192,11 +192,11 @@ impl<L: Iterator<Item = Token>> Parser<L> {
             TokenType::NUMBER | TokenType::IDENT => {
                 let val = self.parse_address(2)?;
                 self.prog
-                    .append_code(&[addr as u8, dest as u8, (val >> 8) as u8, val as u8]);
+                    .append_code(&[addr as u8, dest, (val >> 8) as u8, val as u8]);
             }
             TokenType::REGISTER => {
                 let src = self.parse_register()?;
-                self.prog.append_code(&[reg as u8, dest as u8, src]);
+                self.prog.append_code(&[reg as u8, dest, src]);
             }
             _ => {
                 return Err(self.tokens_err(&[

@@ -1,7 +1,7 @@
 use std::fmt;
 use std::str;
 
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types,clippy::upper_case_acronyms)]
 #[derive(Copy, Clone, PartialEq)]
 pub enum TokenType {
     ILLEGAL,

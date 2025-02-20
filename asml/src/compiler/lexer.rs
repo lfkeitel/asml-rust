@@ -13,9 +13,9 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn new<I: 'static>(src: I) -> Self
+    pub fn new<I>(src: I) -> Self
     where
-        I: Iterator<Item = Result<u8, io::Error>>,
+        I: 'static + Iterator<Item = Result<u8, io::Error>>,
     {
         let mut l = Lexer {
             reader: Box::new(src),
@@ -174,13 +174,13 @@ fn is_ident(ch: u8) -> bool {
 }
 
 fn is_letter(ch: u8) -> bool {
-    b'a' <= ch && ch <= b'z' || b'A' <= ch && ch <= b'Z' || ch == b'_' || ch == b'$'
+    ch.is_ascii_lowercase() || ch.is_ascii_uppercase() || ch == b'_' || ch == b'$'
 }
 
 fn is_hex_digit(ch: u8) -> bool {
-    b'a' <= ch && ch <= b'f' || b'A' <= ch && ch <= b'F' || ch == b'x'
+    (b'a'..=b'f').contains(&ch) || (b'A'..=b'F').contains(&ch) || ch == b'x'
 }
 
 fn is_digit(ch: u8) -> bool {
-    b'0' <= ch && ch <= b'9'
+    ch.is_ascii_digit()
 }

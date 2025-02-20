@@ -16,7 +16,7 @@ const REG_C: u8 = 0xC;
 const REG_D: u8 = 0xD;
 
 fn is_double_reg(r: u8) -> bool {
-    r >= REG_A && r <= REG_D
+    (REG_A..=REG_D).contains(&r)
 }
 
 fn reg_width(r: u8) -> u8 {
@@ -102,7 +102,7 @@ impl VM {
     }
 
     pub fn reset(&mut self) {
-        self.pc = (u16::from(self.memory[0xFFFE])) << 8 | u16::from(self.memory[0xFFFF]);
+        self.pc = ((u16::from(self.memory[0xFFFE])) << 8) | u16::from(self.memory[0xFFFF]);
     }
 
     pub fn output(&self) -> String {
@@ -139,7 +139,7 @@ impl VM {
                 print!("{:02X}", self.memory[i + j]);
                 print!(" ");
             }
-            print!("\n");
+            println!();
             i += 32
         }
     }
@@ -195,7 +195,7 @@ impl VM {
 
                     let mut input = String::new();
                     io::stdin().read_line(&mut input).unwrap_or_default();
-                    let parts: Vec<&str> = input.trim().split_whitespace().collect();
+                    let parts: Vec<&str> = input.split_whitespace().collect();
                     if parts.is_empty() {
                         continue;
                     }
@@ -311,7 +311,7 @@ impl VM {
     }
 
     fn read_single_reg(&self, r: u8) -> u8 {
-        self.registers[r as usize] as u8
+        self.registers[r as usize]
     }
 
     fn write_single_reg(&mut self, r: u8, data: u8) {
@@ -320,13 +320,13 @@ impl VM {
 
     fn read_double_reg(&self, r: u8) -> u16 {
         if r == REG_A {
-            u16::from(self.registers[2]) << 8 | u16::from(self.registers[3])
+            (u16::from(self.registers[2]) << 8) | u16::from(self.registers[3])
         } else if r == REG_B {
-            u16::from(self.registers[4]) << 8 | u16::from(self.registers[5])
+            (u16::from(self.registers[4]) << 8) | u16::from(self.registers[5])
         } else if r == REG_C {
-            u16::from(self.registers[6]) << 8 | u16::from(self.registers[7])
+            (u16::from(self.registers[6]) << 8) | u16::from(self.registers[7])
         } else if r == REG_D {
-            u16::from(self.registers[8]) << 8 | u16::from(self.registers[9])
+            (u16::from(self.registers[8]) << 8) | u16::from(self.registers[9])
         } else {
             0
         }
@@ -355,7 +355,7 @@ impl VM {
         } else if width == 2 {
             let b1 = u16::from(self.memory[addr as usize]);
             let b2 = u16::from(self.memory[(addr + 1) as usize]);
-            return b1 << 8 | b2;
+            return (b1 << 8) | b2;
         }
 
         0

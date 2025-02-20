@@ -25,7 +25,7 @@ impl fmt::Display for SrecordError {
 }
 
 impl error::Error for SrecordError {
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             SrecordError::InvalidLine(_, _) => None,
             SrecordError::IO(ref e) => Some(e),
@@ -118,7 +118,7 @@ fn convert_hex(bytes: &[u8]) -> Vec<u8> {
     }
 
     for i in 0..bytes.len() / 2 {
-        let num = hex_to_byte(bytes[i * 2]) << 4 | hex_to_byte(bytes[(i * 2) + 1]);
+        let num = (hex_to_byte(bytes[i * 2]) << 4) | hex_to_byte(bytes[(i * 2) + 1]);
         converted.push(num);
     }
 
@@ -146,8 +146,8 @@ fn to_hex_string(bytes: &[u8]) -> String {
 
 fn hex_to_byte(h: u8) -> u8 {
     match h as char {
-        '0'...'9' => h - 0x30,
-        'A'...'F' => h - 0x37,
+        '0'..='9' => h - 0x30,
+        'A'..='F' => h - 0x37,
         _ => 0,
     }
 }

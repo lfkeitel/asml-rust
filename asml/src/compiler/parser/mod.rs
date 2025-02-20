@@ -110,9 +110,7 @@ impl<L: Iterator<Item = Token>> Parser<L> {
                 ))),
             };
 
-            if let Err(e) = res {
-                return Err(e);
-            }
+            res?;
 
             self.read_token()
         }
@@ -272,7 +270,7 @@ impl<L: Iterator<Item = Token>> Parser<L> {
                 }
             }
             TokenType::IDENT => {
-                let mut label: &str = &self.cur_tok.literal.as_ref();
+                let mut label: &str = self.cur_tok.literal.as_ref();
                 let lit = label;
 
                 let mut offset = 0i16;
@@ -287,7 +285,7 @@ impl<L: Iterator<Item = Token>> Parser<L> {
                         } else {
                             sub_index
                         }
-                    } as usize;
+                    };
 
                     label = lit.split_at(ind).0;
                     offset = match (lit.split_at(ind).1).parse::<i16>() {

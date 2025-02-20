@@ -126,7 +126,7 @@ fn exec_srecord(path: &str) {
 
 fn execute_code(code: &[asml_vm::CodeSection]) {
     let mut vm = asml_vm::VM::new();
-    vm.install_code(&code);
+    vm.install_code(code);
 
     if vm.run().is_ok() {
         println!("{}", vm.output());
